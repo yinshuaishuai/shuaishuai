@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+    .main {
+        width: 60%;
+        margin: 0 auto;
+    }
+
+    pre {
+        font-family: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace;
+        display: block;
+        padding: 8px 12px;
+        margin: 0 0 8px;
+        font-size: 13px;
+        word-break: break-all;
+        word-wrap: break-word;
+        color: #2e2e2e;
+        background-color: #fafafa;
+        border: 1px solid #dfdfdf;
+        border-radius: 2px;
+    }
+
+    pre {
+        display: block;
+        font-size: 90%;
+        color: #2e2e2e;
+    }
+
+    pre {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        overflow: auto;
+    }
+
+    pre, code, kbd, samp {
+        font-family: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace;
+        font-size: 1em;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    /*pre[Attributes Style*/
+
+    /*]*/
+    /*{*/
+    /*    -webkit-locale: "java"*/
+    /*;*/
+    /*}*/
+    user agent stylesheet
+    pre {
+        display: block;
+        font-family: monospace;
+        white-space: pre;
+        margin: 1em 0px;
+    }
+
+    .md {
+        color: #2e2e2e;
+        word-wrap: break-word;
+    }
+
+    .tab-width-8 {
+        -moz-tab-size: 8;
+        tab-size: 8;
+    }
+
+    body, .form-control, .search form, .search form {
+        font-size: .875rem;
+    }
+
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #2e2e2e;
+        text-align: left;
+        background-color: #fff;
+    }
+
+    :root {
+        --blue: #007bff;
+        --indigo: #6610f2;
+        --purple: #6d49cb;
+        --pink: #e83e8c;
+        --red: #dc3545;
+        --orange: #fd7e14;
+        --yellow: #ffc107;
+        --green: #28a745;
+        --teal: #20c997;
+        --cyan: #17a2b8;
+        --white: #fff;
+        --gray: #919191;
+        --gray-dark: #4f4f4f;
+        --primary: #007bff;
+        --secondary: #f0f0f0;
+        --success: #108548;
+        --info: #1f75cb;
+        --warning: #fc9403;
+        --danger: #dd2b0e;
+        --light: #dbdbdb;
+        --dark: #4f4f4f;
+        --breakpoint-xs: 0;
+        --breakpoint-sm: 576px;
+        --breakpoint-md: 768px;
+        --breakpoint-lg: 992px;
+        --breakpoint-xl: 1200px;
+        --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        --font-family-monospace: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace;
+    }
+
+    html {
+        font-family: sans-serif;
+        line-height: 1.15;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+</style>
+<body>
+<div class="main">
+<h2>Hystrix 隔离策略细粒度控制</h2>
+<p>Hystrix 实现资源隔离，有两种策略：</p>
+<ul>
+    <li>线程池隔离</li>
+    <li>信号量隔离</li>
+</ul>
+<p>对资源隔离这一块东西，其实可以做一定细粒度的一些控制。</p>
+<h3>execution.isolation.strategy</h3>
+<p>指定了 HystrixCommand.run() 的资源隔离策略：<code>THREAD</code> or <code>SEMAPHORE</code>，一种基于线程池，一种基于信号量。</p>
+<pre><code class="language-java">// to use thread isolation
+HystrixCommandProperties.Setter().withExecutionIsolationStrategy(ExecutionIsolationStrategy.THREAD)
+
+// to use semaphore isolation
+HystrixCommandProperties.Setter().withExecutionIsolationStrategy(ExecutionIsolationStrategy.SEMAPHORE)
+</code></pre>
+<p>线程池机制，每个 command 运行在一个线程中，限流是通过线程池的大小来控制的；信号量机制，command 是运行在调用线程中，通过信号量的容量来进行限流。</p>
+<p>如何在线程池和信号量之间做选择？</p>
+<p><strong>默认的策略</strong>就是线程池。</p>
+<p><strong>线程池</strong>其实最大的好处就是对于网络访问请求，如果有超时的话，可以避免调用线程阻塞住。</p>
+<p>而使用信号量的场景，通常是针对超大并发量的场景下，每个服务实例每秒都几百的 <code>QPS</code>，那么此时你用线程池的话，线程一般不会太多，可能撑不住那么高的并发，如果要撑住，可能要耗费大量的线程资源，那么就是用信号量，来进行限流保护。一般用信号量常见于那种基于纯内存的一些业务逻辑服务，而不涉及到任何网络访问请求。</p>
+<h3>command key &amp; command group</h3>
+<p>我们使用线程池隔离，要怎么对<strong>依赖服务</strong>、<strong>依赖服务接口</strong>、<strong>线程池</strong>三者做划分呢？</p>
+<p>每一个 command，都可以设置一个自己的名称 command key，同时可以设置一个自己的组 command group。</p>
+<pre><code class="language-java">private static final Setter cachedSetter = Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey(&quot;ExampleGroup&quot;))
+                                                .andCommandKey(HystrixCommandKey.Factory.asKey(&quot;HelloWorld&quot;));
+
+public CommandHelloWorld(String name) {
+    super(cachedSetter);
+    this.name = name;
+}
+</code></pre>
+<p>command group 是一个非常重要的概念，默认情况下，就是通过 command group 来定义一个线程池的，而且还会通过 command group 来聚合一些监控和报警信息。同一个 command group 中的请求，都会进入同一个线程池中。</p>
+<h3>command thread pool</h3>
+<p>ThreadPoolKey 代表了一个 HystrixThreadPool，用来进行统一监控、统计、缓存。默认的 ThreadPoolKey 就是 command group 的名称。每个 command 都会跟它的 ThreadPoolKey 对应的 ThreadPool 绑定在一起。</p>
+<p>如果不想直接用 command group，也可以手动设置 ThreadPool 的名称。</p>
+<pre><code class="language-java">private static final Setter cachedSetter = Setter.withGroupKey(HystrixCommandGroupKey.Factory.asKey(&quot;ExampleGroup&quot;))
+                                                .andCommandKey(HystrixCommandKey.Factory.asKey(&quot;HelloWorld&quot;))
+                                                .andThreadPoolKey(HystrixThreadPoolKey.Factory.asKey(&quot;HelloWorldPool&quot;));
+
+public CommandHelloWorld(String name) {
+    super(cachedSetter);
+    this.name = name;
+}
+</code></pre>
+<h3>command key &amp; command group &amp; command thread pool</h3>
+<p><strong>command key</strong> ，代表了一类 command，一般来说，代表了底层的依赖服务的一个接口。</p>
+<p><strong>command group</strong> ，代表了某一个底层的依赖服务，这是很合理的，一个依赖服务可能会暴露出来多个接口，每个接口就是一个 command key。command group 在逻辑上去组织起来一堆 command key 的调用、统计信息、成功次数、timeout 超时次数、失败次数等，可以看到某一个服务整体的一些访问情况。一般来说，<strong>推荐</strong>根据一个服务区划分出一个线程池，command key 默认都是属于同一个线程池的。</p>
+<p>比如说你以一个服务为粒度，估算出来这个服务每秒的所有接口加起来的整体 <code>QPS</code> 在 100 左右，你调用这个服务，当前这个服务部署了 10 个服务实例，每个服务实例上，其实用这个 command group 对应这个服务，给一个线程池，量大概在 10 个左右就可以了，你对整个服务的整体的访问 QPS 就大概在每秒 100 左右。</p>
+<p>但是，如果说 command group 对应了一个服务，而这个服务暴露出来的几个接口，访问量很不一样，差异非常之大。你可能就希望在这个服务 command group 内部，包含的对应多个接口的 command key，做一些细粒度的资源隔离。就是说，对同一个服务的不同接口，使用不同的线程池。</p>
+<pre><code>command key -&gt; command group
+
+command key -&gt; 自己的 thread pool key
+</code></pre>
+<p>逻辑上来说，多个 command key 属于一个command group，在做统计的时候，会放在一起统计。每个 command key 有自己的线程池，每个接口有自己的线程池，去做资源隔离和限流。</p>
+<p>说白点，就是说如果你的 command key 要用自己的线程池，可以定义自己的 thread pool key，就 ok 了。</p>
+<h3>coreSize</h3>
+<p>设置线程池的大小，默认是 10。一般来说，用这个默认的 10 个线程大小就够了。</p>
+<pre><code class="language-java">HystrixThreadPoolProperties.Setter().withCoreSize(int value);
+</code></pre>
+<h3>queueSizeRejectionThreshold</h3>
+<p>如果说线程池中的 10 个线程都在工作中，没有空闲的线程来做其它的事情，此时再有请求过来，会先进入队列积压。如果说队列积压满了，再有请求过来，就直接 reject，拒绝请求，执行 fallback 降级的逻辑，快速返回。</p>
+<p><img src="/images/hystrix-thread-pool-queue.png" alt="hystrix-thread-pool-queue" /></p>
+<p>控制 queue 满了之后 reject 的 threshold，因为 maxQueueSize 不允许热修改，因此提供这个参数可以热修改，控制队列的最大大小。</p>
+<pre><code class="language-java">HystrixThreadPoolProperties.Setter().withQueueSizeRejectionThreshold(int value);
+</code></pre>
+<h3>execution.isolation.semaphore.maxConcurrentRequests</h3>
+<p>设置使用 SEMAPHORE 隔离策略的时候允许访问的最大并发量，超过这个最大并发量，请求直接被 reject。</p>
+<p>这个并发量的设置，跟线程池大小的设置，应该是类似的，但是基于信号量的话，性能会好很多，而且 Hystrix 框架本身的开销会小很多。</p>
+<p>默认值是 10，尽量设置的小一些，因为一旦设置的太大，而且有延时发生，可能瞬间导致 tomcat 本身的线程资源被占满。</p>
+<pre><code class="language-java">HystrixCommandProperties.Setter().withExecutionIsolationSemaphoreMaxConcurrentRequests(int value);
+</code></pre>
+</div>
+</body>
+</html>
